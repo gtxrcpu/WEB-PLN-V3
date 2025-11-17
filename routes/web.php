@@ -1,0 +1,143 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\SearchController;
+use App\Http\Controllers\AparController;
+use App\Http\Controllers\KartuKendaliController;
+use App\Http\Controllers\ScanController;
+use App\Http\Controllers\ApatController;
+use App\Http\Controllers\ApatKartuController;
+
+Route::get('/', fn () => redirect()->route('login'));
+
+Route::get('/admin', fn () => view('dashboard.admin'))->name('admin.dashboard');
+Route::get('/inspector', fn () => view('dashboard.inspector'))->name('inspector.dashboard');
+Route::get('/user', [\App\Http\Controllers\DashboardController::class, 'user'])->name('user.dashboard');
+
+Route::get('/dashboard', function () {
+    $u = auth()->user();
+    if (!$u) return redirect()->route('login');
+    if (method_exists($u, 'hasRole') && $u->hasRole('Admin'))     return redirect()->route('admin.dashboard');
+    if (method_exists($u, 'hasRole') && $u->hasRole('Inspector')) return redirect()->route('inspector.dashboard');
+    return redirect()->route('user.dashboard');
+})->middleware('auth')->name('dashboard');
+
+Route::get('/user/items', fn() => view('user.items.index'))->middleware('auth')->name('user.items');
+
+// API search realtime (web guard, JSON)
+Route::get('/search/items', [SearchController::class, 'userItems'])
+    ->middleware('auth')
+    ->name('search.items');
+
+// Ini Modul APAR
+Route::middleware(['auth'])->group(function () {
+    Route::get('/apar', [AparController::class, 'index'])->name('apar.index');
+    Route::get('/apar/create', [AparController::class, 'create'])->name('apar.create');
+    Route::post('/apar', [AparController::class, 'store'])->name('apar.store');
+    Route::get('/kartu/create', [KartuKendaliController::class, 'create'])->name('kartu.create');
+    Route::post('/kartu', [KartuKendaliController::class, 'store'])->name('kartu.store');
+    Route::get('/scan', [ScanController::class, 'index'])->name('user.scan');
+    Route::get('/apar/list', [AparController::class, 'list'])->name('apar.list');
+    Route::get('/apar/{apar}/qr.svg', [AparController::class, 'qrSvg'])->name('apar.qr');
+    Route::get('/apar/{apar}/edit', [AparController::class, 'edit'])->name('apar.edit');
+    Route::put('/apar/{apar}', [AparController::class, 'update'])->name('apar.update');
+});
+
+Route::resource('apar', \App\Http\Controllers\AparController::class)
+    ->only(['index', 'create', 'store'])
+    ->middleware(['auth']);
+
+    // Ini Modul APAT
+Route::middleware(['auth'])->group(function () {
+    Route::get('/apat', [ApatController::class, 'index'])->name('apat.index');
+    Route::get('/apat/create', [ApatController::class, 'create'])->name('apat.create');
+    Route::post('/apat', [ApatController::class, 'store'])->name('apat.store');
+    Route::get('/apat/{apat}/edit', [ApatController::class, 'edit'])->name('apat.edit');
+    Route::get('/apat/{apat}/riwayat', [ApatController::class, 'riwayat'])->name('apat.riwayat');
+    Route::put('/apat/{apat}', [ApatController::class, 'update'])->name('apat.update');
+    Route::get('/apat/kartu/create', [ApatKartuController::class, 'create'])->name('apat.kartu.create');
+    Route::post('/apat/kartu', [ApatKartuController::class, 'store'])->name('apat.kartu.store');
+});
+
+// Ini Modul Fire Alarm
+Route::middleware(['auth'])->group(function () {
+    Route::get('/fire-alarm', [\App\Http\Controllers\FireAlarmController::class, 'index'])->name('fire-alarm.index');
+    Route::get('/fire-alarm/create', [\App\Http\Controllers\FireAlarmController::class, 'create'])->name('fire-alarm.create');
+    Route::post('/fire-alarm', [\App\Http\Controllers\FireAlarmController::class, 'store'])->name('fire-alarm.store');
+    Route::get('/fire-alarm/{fireAlarm}/edit', [\App\Http\Controllers\FireAlarmController::class, 'edit'])->name('fire-alarm.edit');
+    Route::put('/fire-alarm/{fireAlarm}', [\App\Http\Controllers\FireAlarmController::class, 'update'])->name('fire-alarm.update');
+    Route::get('/fire-alarm/{fireAlarm}/riwayat', [\App\Http\Controllers\FireAlarmController::class, 'riwayat'])->name('fire-alarm.riwayat');
+    Route::get('/fire-alarm/kartu/create', [\App\Http\Controllers\FireAlarmKartuController::class, 'create'])->name('fire-alarm.kartu.create');
+    Route::post('/fire-alarm/kartu', [\App\Http\Controllers\FireAlarmKartuController::class, 'store'])->name('fire-alarm.kartu.store');
+});
+
+// Ini Modul Box Hydrant
+Route::middleware(['auth'])->group(function () {
+    Route::get('/box-hydrant', [\App\Http\Controllers\BoxHydrantController::class, 'index'])->name('box-hydrant.index');
+    Route::get('/box-hydrant/create', [\App\Http\Controllers\BoxHydrantController::class, 'create'])->name('box-hydrant.create');
+    Route::post('/box-hydrant', [\App\Http\Controllers\BoxHydrantController::class, 'store'])->name('box-hydrant.store');
+    Route::get('/box-hydrant/{boxHydrant}/edit', [\App\Http\Controllers\BoxHydrantController::class, 'edit'])->name('box-hydrant.edit');
+    Route::put('/box-hydrant/{boxHydrant}', [\App\Http\Controllers\BoxHydrantController::class, 'update'])->name('box-hydrant.update');
+    Route::get('/box-hydrant/{boxHydrant}/riwayat', [\App\Http\Controllers\BoxHydrantController::class, 'riwayat'])->name('box-hydrant.riwayat');
+    Route::get('/box-hydrant/kartu/create', [\App\Http\Controllers\BoxHydrantKartuController::class, 'create'])->name('box-hydrant.kartu.create');
+    Route::post('/box-hydrant/kartu', [\App\Http\Controllers\BoxHydrantKartuController::class, 'store'])->name('box-hydrant.kartu.store');
+});
+
+// Ini Modul Rumah Pompa
+Route::middleware(['auth'])->group(function () {
+    Route::get('/rumah-pompa', [\App\Http\Controllers\RumahPompaController::class, 'index'])->name('rumah-pompa.index');
+    Route::get('/rumah-pompa/create', [\App\Http\Controllers\RumahPompaController::class, 'create'])->name('rumah-pompa.create');
+    Route::post('/rumah-pompa', [\App\Http\Controllers\RumahPompaController::class, 'store'])->name('rumah-pompa.store');
+    Route::get('/rumah-pompa/{rumahPompa}/edit', [\App\Http\Controllers\RumahPompaController::class, 'edit'])->name('rumah-pompa.edit');
+    Route::put('/rumah-pompa/{rumahPompa}', [\App\Http\Controllers\RumahPompaController::class, 'update'])->name('rumah-pompa.update');
+    Route::get('/rumah-pompa/{rumahPompa}/riwayat', [\App\Http\Controllers\RumahPompaController::class, 'riwayat'])->name('rumah-pompa.riwayat');
+    Route::get('/rumah-pompa/kartu/create', [\App\Http\Controllers\RumahPompaKartuController::class, 'create'])->name('rumah-pompa.kartu.create');
+    Route::post('/rumah-pompa/kartu', [\App\Http\Controllers\RumahPompaKartuController::class, 'store'])->name('rumah-pompa.kartu.store');
+});
+
+// Ini Modul APAB
+Route::middleware(['auth'])->group(function () {
+    Route::get('/apab', [\App\Http\Controllers\ApabController::class, 'index'])->name('apab.index');
+    Route::get('/apab/create', [\App\Http\Controllers\ApabController::class, 'create'])->name('apab.create');
+    Route::post('/apab', [\App\Http\Controllers\ApabController::class, 'store'])->name('apab.store');
+    Route::get('/apab/{apab}/edit', [\App\Http\Controllers\ApabController::class, 'edit'])->name('apab.edit');
+    Route::put('/apab/{apab}', [\App\Http\Controllers\ApabController::class, 'update'])->name('apab.update');
+    Route::get('/apab/{apab}/riwayat', [\App\Http\Controllers\ApabController::class, 'riwayat'])->name('apab.riwayat');
+    Route::get('/apab/kartu/create', [\App\Http\Controllers\ApabKartuController::class, 'create'])->name('apab.kartu.create');
+    Route::post('/apab/kartu', [\App\Http\Controllers\ApabKartuController::class, 'store'])->name('apab.kartu.store');
+});
+
+// Ini Modul Referensi
+Route::middleware(['auth'])->group(function () {
+    Route::get('/referensi', [\App\Http\Controllers\ReferensiController::class, 'index'])->name('referensi.index');
+    
+    // Category Routes
+    Route::post('/referensi/category', [\App\Http\Controllers\ReferensiController::class, 'storeCategory'])->name('referensi.category.store');
+    Route::put('/referensi/category/{category}', [\App\Http\Controllers\ReferensiController::class, 'updateCategory'])->name('referensi.category.update');
+    Route::delete('/referensi/category/{category}', [\App\Http\Controllers\ReferensiController::class, 'deleteCategory'])->name('referensi.category.delete');
+    
+    // Location Routes
+    Route::post('/referensi/location', [\App\Http\Controllers\ReferensiController::class, 'storeLocation'])->name('referensi.location.store');
+    Route::put('/referensi/location/{location}', [\App\Http\Controllers\ReferensiController::class, 'updateLocation'])->name('referensi.location.update');
+    Route::delete('/referensi/location/{location}', [\App\Http\Controllers\ReferensiController::class, 'deleteLocation'])->name('referensi.location.delete');
+    
+    // Petugas Routes
+    Route::post('/referensi/petugas', [\App\Http\Controllers\ReferensiController::class, 'storePetugas'])->name('referensi.petugas.store');
+    Route::put('/referensi/petugas/{petugas}', [\App\Http\Controllers\ReferensiController::class, 'updatePetugas'])->name('referensi.petugas.update');
+    Route::delete('/referensi/petugas/{petugas}', [\App\Http\Controllers\ReferensiController::class, 'deletePetugas'])->name('referensi.petugas.delete');
+});
+
+// Quick Actions
+Route::middleware(['auth'])->group(function () {
+    Route::get('/quick/scan', [\App\Http\Controllers\QuickActionController::class, 'scan'])->name('quick.scan');
+    Route::post('/quick/scan', [\App\Http\Controllers\QuickActionController::class, 'searchQR'])->name('quick.scan.search');
+    Route::get('/quick/inspeksi', [\App\Http\Controllers\QuickActionController::class, 'inspeksi'])->name('quick.inspeksi');
+    Route::get('/quick/rekap', [\App\Http\Controllers\QuickActionController::class, 'rekap'])->name('quick.rekap');
+    Route::get('/quick/export-excel', [\App\Http\Controllers\QuickActionController::class, 'exportExcel'])->name('quick.export.excel');
+    Route::get('/quick/export-pdf', [\App\Http\Controllers\QuickActionController::class, 'exportPdf'])->name('quick.export.pdf');
+});
+
+// API Search
+Route::get('/api/search', [\App\Http\Controllers\Api\SearchController::class, 'search'])->middleware('auth');
+
+require __DIR__ . '/auth.php';
