@@ -23,10 +23,14 @@ class KartuApar extends Model
         'kesimpulan',
         'tgl_periksa',
         'petugas',
+        'signature_id',
+        'approved_by',
+        'approved_at',
     ];
 
     protected $casts = [
         'tgl_periksa' => 'date',
+        'approved_at' => 'datetime',
     ];
 
     /**
@@ -43,5 +47,29 @@ class KartuApar extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Relasi ke Signature (TTD)
+     */
+    public function signature()
+    {
+        return $this->belongsTo(Signature::class);
+    }
+
+    /**
+     * Relasi ke User yang approve
+     */
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    /**
+     * Check if approved
+     */
+    public function isApproved()
+    {
+        return !is_null($this->approved_at);
     }
 }

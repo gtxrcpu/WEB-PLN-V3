@@ -10,19 +10,45 @@ use App\Http\Controllers\ApatKartuController;
 
 Route::get('/', fn () => redirect()->route('login'));
 
-Route::get('/admin', fn () => view('dashboard.admin'))->name('admin.dashboard');
+// Admin Routes
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
+    Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
+    Route::resource('signatures', \App\Http\Controllers\Admin\SignatureController::class);
+    
+    // Equipment Management
+    Route::resource('apar', \App\Http\Controllers\Admin\AparController::class);
+    
+    // Approvals
+    Route::get('/approvals', [\App\Http\Controllers\Admin\ApprovalController::class, 'index'])->name('approvals.index');
+    Route::get('/approvals/{id}', [\App\Http\Controllers\Admin\ApprovalController::class, 'show'])->name('approvals.show');
+    Route::post('/approvals/{id}/approve', [\App\Http\Controllers\Admin\ApprovalController::class, 'approve'])->name('approvals.approve');
+    Route::post('/approvals/{id}/reject', [\App\Http\Controllers\Admin\ApprovalController::class, 'reject'])->name('approvals.reject');
+    
+    // Kartu Settings (Legacy - will be replaced by templates)
+    Route::get('/kartu-settings', [\App\Http\Controllers\Admin\KartuSettingController::class, 'index'])->name('kartu-settings.index');
+    Route::put('/kartu-settings', [\App\Http\Controllers\Admin\KartuSettingController::class, 'update'])->name('kartu-settings.update');
+    
+    // Kartu Templates (New - per module)
+    Route::get('/kartu-templates', [\App\Http\Controllers\Admin\KartuTemplateController::class, 'index'])->name('kartu-templates.index');
+    Route::get('/kartu-templates/create', [\App\Http\Controllers\Admin\KartuTemplateController::class, 'create'])->name('kartu-templates.create');
+    Route::post('/kartu-templates', [\App\Http\Controllers\Admin\KartuTemplateController::class, 'store'])->name('kartu-templates.store');
+    Route::get('/kartu-templates/{module}/edit', [\App\Http\Controllers\Admin\KartuTemplateController::class, 'edit'])->name('kartu-templates.edit');
+    Route::put('/kartu-templates/{module}', [\App\Http\Controllers\Admin\KartuTemplateController::class, 'update'])->name('kartu-templates.update');
+});
+
 Route::get('/inspector', fn () => view('dashboard.inspector'))->name('inspector.dashboard');
 Route::get('/user', [\App\Http\Controllers\DashboardController::class, 'user'])->name('user.dashboard');
 
 Route::get('/dashboard', function () {
     $u = auth()->user();
     if (!$u) return redirect()->route('login');
-    if (method_exists($u, 'hasRole') && $u->hasRole('Admin'))     return redirect()->route('admin.dashboard');
+    if (method_exists($u, 'hasRole') && $u->hasRole('admin'))     return redirect()->route('admin.dashboard');
     if (method_exists($u, 'hasRole') && $u->hasRole('Inspector')) return redirect()->route('inspector.dashboard');
     return redirect()->route('user.dashboard');
 })->middleware('auth')->name('dashboard');
 
-Route::get('/user/items', fn() => view('user.items.index'))->middleware('auth')->name('user.items');
+
 
 // API search realtime (web guard, JSON)
 Route::get('/search/items', [SearchController::class, 'userItems'])
@@ -34,6 +60,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/apar', [AparController::class, 'index'])->name('apar.index');
     Route::get('/apar/create', [AparController::class, 'create'])->name('apar.create');
     Route::post('/apar', [AparController::class, 'store'])->name('apar.store');
+    Route::get('/apar/{apar}/riwayat', [AparController::class, 'riwayat'])->name('apar.riwayat');
+    Route::get('/apar/{apar}/kartu/{kartu}', [AparController::class, 'viewKartu'])->name('apar.view-kartu');
     Route::get('/kartu/create', [KartuKendaliController::class, 'create'])->name('kartu.create');
     Route::post('/kartu', [KartuKendaliController::class, 'store'])->name('kartu.store');
     Route::get('/scan', [ScanController::class, 'index'])->name('user.scan');
@@ -127,6 +155,18 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/referensi/petugas/{petugas}', [\App\Http\Controllers\ReferensiController::class, 'deletePetugas'])->name('referensi.petugas.delete');
 });
 
+// Ini Modul P3K
+Route::middleware(['auth'])->group(function () {
+    Route::get('/p3k', [\App\Http\Controllers\P3kController::class, 'index'])->name('p3k.index');
+    Route::get('/p3k/create', [\App\Http\Controllers\P3kController::class, 'create'])->name('p3k.create');
+    Route::post('/p3k', [\App\Http\Controllers\P3kController::class, 'store'])->name('p3k.store');
+    Route::get('/p3k/{p3k}/edit', [\App\Http\Controllers\P3kController::class, 'edit'])->name('p3k.edit');
+    Route::get('/p3k/{p3k}/riwayat', [\App\Http\Controllers\P3kController::class, 'riwayat'])->name('p3k.riwayat');
+    Route::put('/p3k/{p3k}', [\App\Http\Controllers\P3kController::class, 'update'])->name('p3k.update');
+    Route::get('/p3k/kartu/create', [\App\Http\Controllers\KartuP3kController::class, 'create'])->name('p3k.kartu.create');
+    Route::post('/p3k/kartu', [\App\Http\Controllers\KartuP3kController::class, 'store'])->name('p3k.kartu.store');
+});
+
 // Quick Actions
 Route::middleware(['auth'])->group(function () {
     Route::get('/quick/scan', [\App\Http\Controllers\QuickActionController::class, 'scan'])->name('quick.scan');
@@ -139,5 +179,12 @@ Route::middleware(['auth'])->group(function () {
 
 // API Search
 Route::get('/api/search', [\App\Http\Controllers\Api\SearchController::class, 'search'])->middleware('auth');
+
+// Profile
+Route::middleware(['auth'])->group(function () {
+    Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [\App\Http\Controllers\ProfileController::class, 'updatePassword'])->name('profile.password.update');
+});
 
 require __DIR__ . '/auth.php';

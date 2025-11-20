@@ -99,4 +99,12 @@ class Apar extends Model
     {
         $this->generateQrSvg(true);
     }
+
+    /**
+     * Relasi ke kartu kendali APAR
+     */
+    public function kartuApars()
+    {
+        return $this->hasMany(\App\Models\KartuApar::class, 'apar_id');
+    }
 }

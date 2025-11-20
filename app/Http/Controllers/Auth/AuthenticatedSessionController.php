@@ -46,10 +46,10 @@ class AuthenticatedSessionController extends Controller
 
         // Redirect by role (spatie/permission)
         if ($user && method_exists($user, 'hasRole')) {
-            if ($user->hasRole('Admin')) {
+            if ($user->hasRole('admin')) {
                 return redirect()->intended(route('admin.dashboard'));
             }
-            if ($user->hasRole('Inspector')) {
+            if ($user->hasRole('inspector')) {
                 return redirect()->intended(route('inspector.dashboard'));
             }
             // Default ke user dashboard

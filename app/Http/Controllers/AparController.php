@@ -116,4 +116,53 @@ class AparController extends Controller
             ->route('apar.index')
             ->with('success', 'Data APAR ' . $apar->serial_no . ' berhasil diperbarui.');
     }
+
+    /**
+     * Tampilkan riwayat kartu kendali APAR
+     */
+    public function riwayat(Apar $apar)
+    {
+        $kartuKendali = $apar->kartuApars()->with(['signature', 'approver'])->latest()->get();
+        
+        return view('apar.riwayat', compact('apar', 'kartuKendali'));
+    }
+
+    /**
+     * View detail kartu kendali dengan TTD
+     */
+    public function viewKartu($aparId, $kartuId)
+    {
+        $apar = Apar::findOrFail($aparId);
+        $kartu = \App\Models\KartuApar::with(['signature', 'approver'])->findOrFail($kartuId);
+        
+        // Get template for APAR module
+        $template = \App\Models\KartuTemplate::getTemplate('apar');
+        
+        // Fill template with real data
+        if ($template) {
+            // Map data berdasarkan label field
+            $labelMap = [
+                'No. Dokumen' => 'APAR-' . str_pad($kartu->id, 4, '0', STR_PAD_LEFT),
+                'Revisi' => '00',
+                'Tanggal' => \Carbon\Carbon::parse($kartu->tgl_periksa)->format('d F Y'),
+                'Halaman' => '1 dari 1',
+            ];
+            
+            // Update header fields dengan data real
+            $headerFields = collect($template->header_fields)->map(function($field) use ($labelMap) {
+                // Cek apakah label ada di map
+                if (isset($labelMap[$field['label']])) {
+                    $field['value'] = $labelMap[$field['label']];
+                }
+                return $field;
+            })->toArray();
+            
+            $template->header_fields = $headerFields;
+            
+            // Update footer fields dengan data real (lokasi tetap dari template)
+            // Footer fields sudah OK dari template
+        }
+        
+        return view('apar.view-kartu', compact('apar', 'kartu', 'template'));
+    }
 }

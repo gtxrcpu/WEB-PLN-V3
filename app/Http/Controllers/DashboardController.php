@@ -17,6 +17,7 @@ class DashboardController extends Controller
         // Ambil data status dari setiap modul
         $aparData = [
             'baik' => Apar::where('status', 'baik')->count(),
+            'isi_ulang' => Apar::where('status', 'isi ulang')->count(),
             'rusak' => Apar::where('status', 'rusak')->count(),
             'total' => Apar::count()
         ];

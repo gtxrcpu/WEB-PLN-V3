@@ -19,8 +19,11 @@ class KartuKendaliController extends Controller
         // kalau apar_id nggak ada / salah, langsung 404
         $apar = Apar::findOrFail($aparId);
 
+        // Get template for APAR module
+        $template = \App\Models\KartuTemplate::getTemplate('apar');
+
         // pake view yang kamu kirim: resources/views/kartu/create.blade.php
-        return view('kartu.create', compact('apar'));
+        return view('kartu.create', compact('apar', 'template'));
     }
 
     /**

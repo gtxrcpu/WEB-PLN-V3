@@ -12,13 +12,19 @@
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <img src="{{ asset('images/logoo.png') }}" alt="PLN" class="h-8 w-auto object-contain">
-        <span class="font-semibold">Inventaris K3 PLN — <span class="text-emerald-700">User</span></span>
+        <span class="font-semibold">Inventaris K3 PLN — 
+          @if(auth()->check() && auth()->user()->hasRole('admin'))
+            <span class="text-purple-700">Admin</span>
+          @else
+            <span class="text-emerald-700">User</span>
+          @endif
+        </span>
       </div>
 
       <div class="hidden md:flex items-center gap-4">
         @php
           $u = auth()->user();
-          $avatar = $u?->avatar_path ? asset('storage/'.$u->avatar_path) : null;
+          $avatar = $u?->avatar ? asset('storage/'.$u->avatar) : null;
           $initial = strtoupper(mb_substr($u?->name ?? 'U', 0, 1));
         @endphp
         <div x-data="{open:false}" class="relative">
@@ -29,11 +35,34 @@
               <div class="h-8 w-8 rounded-full bg-emerald-100 text-emerald-800 grid place-items-center ring-1 ring-emerald-200">{{ $initial }}</div>
             @endif
             <span class="text-sm">{{ $u?->name ?? 'User' }}</span>
+            <svg class="w-4 h-4 text-slate-600 transition-transform" :class="{'rotate-180': open}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
           </button>
 
           <div x-cloak x-show="open" @click.outside="open=false" x-transition
                class="absolute right-0 mt-2 w-60 rounded-xl bg-white shadow-md ring-1 ring-slate-200 p-2">
-            <a href="#" class="block rounded-lg px-3 py-2 hover:bg-slate-50 text-slate-700">Profil</a>
+            @if(auth()->check() && auth()->user()->hasRole('admin'))
+              <a href="{{ route('admin.dashboard') }}" class="block rounded-lg px-3 py-2 hover:bg-purple-50 text-purple-700 font-medium">
+                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+                Admin Panel
+              </a>
+              <a href="{{ route('user.dashboard') }}" class="block rounded-lg px-3 py-2 hover:bg-slate-50 text-slate-700">
+                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                </svg>
+                User Dashboard
+              </a>
+              <div class="border-t border-slate-200 my-2"></div>
+            @endif
+            <a href="{{ route('profile.edit') }}" class="block rounded-lg px-3 py-2 hover:bg-slate-50 text-slate-700">
+              <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+              Profil
+            </a>
             <form method="POST" action="{{ route('logout') }}">
               @csrf
               <button type="submit" class="w-full text-left rounded-lg px-3 py-2 hover:bg-rose-50 text-rose-700">Logout</button>
@@ -51,37 +80,381 @@
     {{ $slot }}
   </main>
 
-  {{-- Bottom nav (mobile) --}}
-  <nav class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur
-            border-t border-slate-200 shadow-[0_-6px_16px_rgba(2,6,23,0.06)]
-            pb-[env(safe-area-inset-bottom)]">
-  <div class="grid grid-cols-4 text-[11px] text-slate-600">
-    <a href="{{ route('user.dashboard') }}" class="flex flex-col items-center justify-center gap-1 py-3 hover:text-slate-900">
-      {{-- Home (biarkan yang lama) --}}
-      <svg viewBox="0 0 24 24" class="h-5 w-5"><path d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1v-10.5Z" fill="currentColor"/></svg>
-      <span>Home</span>
-    </a>
+  {{-- Bottom nav (mobile) - Different for Admin & User --}}
+  <nav class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 shadow-lg pb-safe">
+    @if(auth()->check() && auth()->user()->hasRole('admin'))
+      {{-- Admin Navigation --}}
+      <div class="grid grid-cols-3 h-16">
+        <a href="{{ route('admin.dashboard') }}" 
+           class="relative flex flex-col items-center justify-center gap-1 text-slate-700 hover:text-purple-600 hover:bg-purple-50 transition-all {{ request()->routeIs('admin.dashboard') ? 'text-purple-600 bg-purple-50' : '' }}">
+          @if(request()->routeIs('admin.dashboard'))
+            <span class="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-purple-600 rounded-b-full"></span>
+          @endif
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+          </svg>
+          <span class="text-xs font-medium">Home</span>
+        </a>
 
-    <a href="{{ route('user.items') }}" class="flex flex-col items-center justify-center gap-1 py-3 hover:text-slate-900">
-      {{-- Item (ikon BARU) --}}
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24">
-        <path fill="currentColor" fill-rule="evenodd"
-              d="M12 1.25c-.605 0-1.162.15-1.771.402c-.589.244-1.273.603-2.124 1.05L6.037 3.787c-1.045.548-1.88.987-2.527 1.418c-.668.447-1.184.917-1.559 1.554c-.374.635-.542 1.323-.623 2.142c-.078.795-.078 1.772-.078 3.002v.194c0 1.23 0 2.207.078 3.002c.081.82.25 1.507.623 2.142c.375.637.89 1.107 1.56 1.554c.645.431 1.481.87 2.526 1.418l2.068 1.085c.851.447 1.535.806 2.124 1.05c.61.252 1.166.402 1.771.402s1.162-.15 1.771-.402c.589-.244 1.273-.603 2.124-1.05l2.068-1.084c1.045-.549 1.88-.988 2.526-1.419c.67-.447 1.185-.917 1.56-1.554c.374-.635.542-1.323.623-2.142c.078-.795.078-1.772.078-3.001v-.196c0-1.229 0-2.206-.078-3.001c-.081-.82-.25-1.507-.623-2.142c-.375-.637-.89-1.107-1.56-1.554c-.645-.431-1.481-.87-2.526-1.418l-2.068-1.085c-.851-.447-1.535-.806-2.124-1.05c-.61-.252-1.166-.402-1.771-.402M8.77 4.046c.89-.467 1.514-.793 2.032-1.007c.504-.209.859-.289 1.198-.289c.34 0 .694.08 1.198.289c.518.214 1.141.54 2.031 1.007l2 1.05c1.09.571 1.855.974 2.428 1.356c.282.189.503.364.683.54l-3.331 1.665l-8.5-4.474zm-1.825.958l-.174.092c-1.09.571-1.855.974-2.427 1.356a4.7 4.7 0 0 0-.683.54L12 11.162l3.357-1.68l-8.206-4.318a.8.8 0 0 1-.206-.16M2.938 8.307c-.05.214-.089.457-.117.74c-.07.714-.071 1.617-.071 2.894v.117c0 1.278 0 2.181.071 2.894c.069.697.2 1.148.423 1.528c.222.377.543.696 1.1 1.068c.572.382 1.337.785 2.427 1.356l2 1.05c.89.467 1.513.793 2.031 1.007q.244.101.448.165v-8.663zm9.812 12.818q.204-.063.448-.164c.518-.214 1.141-.54 2.031-1.007l2-1.05c1.09-.572 1.855-.974 2.428-1.356c.556-.372.877-.691 1.1-1.068c.223-.38.353-.83.422-1.528c.07-.713.071-1.616.071-2.893v-.117c0-1.278 0-2.181-.071-2.894a6 6 0 0 0-.117-.74L17.75 9.963V13a.75.75 0 0 1-1.5 0v-2.286l-3.5 1.75z"
-              clip-rule="evenodd"/>
-      </svg>
-      <span>Item</span>
-    </a>
+        <button onclick="toggleModulSheet('admin')" 
+           class="relative flex flex-col items-center justify-center gap-1 text-slate-700 hover:text-purple-600 hover:bg-purple-50 transition-all {{ request()->routeIs('admin.apar.*') || request()->routeIs('apar.*') || request()->routeIs('apat.*') || request()->routeIs('apab.*') || request()->routeIs('fire-alarm.*') || request()->routeIs('box-hydrant.*') || request()->routeIs('rumah-pompa.*') || request()->routeIs('p3k.*') || request()->routeIs('referensi.*') ? 'text-purple-600 bg-purple-50' : '' }}">
+          @if(request()->routeIs('admin.apar.*') || request()->routeIs('apar.*') || request()->routeIs('apat.*') || request()->routeIs('apab.*') || request()->routeIs('fire-alarm.*') || request()->routeIs('box-hydrant.*') || request()->routeIs('rumah-pompa.*') || request()->routeIs('p3k.*') || request()->routeIs('referensi.*'))
+            <span class="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-purple-600 rounded-b-full"></span>
+          @endif
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+          </svg>
+          <span class="text-xs font-medium">Modul</span>
+        </button>
 
-    <form method="POST" action="{{ route('logout') }}" class="flex flex-col items-center justify-center gap-1 py-3">
-      @csrf
-      <button class="text-rose-700 hover:text-rose-800 flex flex-col items-center">
-        {{-- Logout (tetap) --}}
-        <svg viewBox="0 0 24 24" class="h-5 w-5"><path d="M9 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3M16 17l5-5-5-5M21 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span>Logout</span>
-      </button>
-    </form>
+        <form method="POST" action="{{ route('logout') }}">
+          @csrf
+          <button type="submit" class="w-full h-full flex flex-col items-center justify-center gap-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+            <span class="text-xs font-medium">Logout</span>
+          </button>
+        </form>
+      </div>
+    @else
+      {{-- User Navigation --}}
+      <div class="grid grid-cols-3 h-16">
+        <a href="{{ route('user.dashboard') }}" 
+           class="relative flex flex-col items-center justify-center gap-1 text-slate-700 hover:text-blue-600 hover:bg-blue-50 transition-all {{ request()->routeIs('user.dashboard') ? 'text-blue-600 bg-blue-50' : '' }}">
+          @if(request()->routeIs('user.dashboard'))
+            <span class="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-blue-600 rounded-b-full"></span>
+          @endif
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+          </svg>
+          <span class="text-xs font-medium">Home</span>
+        </a>
+
+        <button onclick="toggleModulSheet('user')" 
+           class="relative flex flex-col items-center justify-center gap-1 text-slate-700 hover:text-blue-600 hover:bg-blue-50 transition-all {{ request()->routeIs('apar.*') || request()->routeIs('apat.*') || request()->routeIs('apab.*') || request()->routeIs('fire-alarm.*') || request()->routeIs('box-hydrant.*') || request()->routeIs('rumah-pompa.*') || request()->routeIs('p3k.*') || request()->routeIs('referensi.*') ? 'text-blue-600 bg-blue-50' : '' }}">
+          @if(request()->routeIs('apar.*') || request()->routeIs('apat.*') || request()->routeIs('apab.*') || request()->routeIs('fire-alarm.*') || request()->routeIs('box-hydrant.*') || request()->routeIs('rumah-pompa.*') || request()->routeIs('p3k.*') || request()->routeIs('referensi.*'))
+            <span class="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-blue-600 rounded-b-full"></span>
+          @endif
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+          </svg>
+          <span class="text-xs font-medium">Modul</span>
+        </button>
+
+        <form method="POST" action="{{ route('logout') }}">
+          @csrf
+          <button type="submit" class="w-full h-full flex flex-col items-center justify-center gap-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+            <span class="text-xs font-medium">Logout</span>
+          </button>
+        </form>
+      </div>
+    @endif
+  </nav>
+
+  {{-- Module Bottom Sheet --}}
+  <div id="modulSheet" class="md:hidden fixed inset-0 z-50 pointer-events-none">
+    {{-- Backdrop --}}
+    <div id="modulBackdrop" class="absolute inset-0 bg-black/50 opacity-0 transition-opacity duration-300"></div>
+    
+    {{-- Sheet --}}
+    <div id="modulSheetContent" class="absolute bottom-0 inset-x-0 bg-white rounded-t-3xl shadow-2xl transform translate-y-full transition-transform duration-300 max-h-[85vh] overflow-y-auto pb-safe">
+      <div class="p-4 sm:p-6">
+        {{-- Handle --}}
+        <div class="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-4"></div>
+        
+        <h3 class="text-base sm:text-lg font-bold mb-3 sm:mb-4">Pilih Modul</h3>
+        
+        {{-- Module List --}}
+        <div id="adminModules" class="grid grid-cols-2 gap-3 hidden">
+          {{-- APAR --}}
+          <a href="{{ route('admin.apar.index') }}" class="flex flex-col items-center gap-2 p-3 rounded-xl transition-all group {{ request()->routeIs('admin.apar.*') || request()->routeIs('apar.*') ? 'bg-red-50 ring-2 ring-red-500' : 'bg-slate-50 hover:bg-red-50' }}">
+            <div class="w-16 h-16 rounded-xl bg-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-md p-2">
+              <img src="{{ asset('images/apar.png') }}" alt="APAR" class="w-full h-full object-contain">
+            </div>
+            <div class="text-center">
+              <p class="font-bold text-slate-900 text-sm">APAR</p>
+              @if(request()->routeIs('admin.apar.*') || request()->routeIs('apar.*'))
+                <svg class="w-4 h-4 text-red-600 mx-auto mt-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+              @endif
+            </div>
+          </a>
+
+          {{-- APAT --}}
+          <a href="{{ route('apat.index') }}" class="flex flex-col items-center gap-2 p-3 rounded-xl transition-all group {{ request()->routeIs('apat.*') ? 'bg-cyan-50 ring-2 ring-cyan-500' : 'bg-slate-50 hover:bg-cyan-50' }}">
+            <div class="w-16 h-16 rounded-xl bg-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-md p-2">
+              <img src="{{ asset('images/apat.png') }}" alt="APAT" class="w-full h-full object-contain">
+            </div>
+            <div class="text-center">
+              <p class="font-bold text-slate-900 text-sm">APAT</p>
+              @if(request()->routeIs('apat.*'))
+                <svg class="w-4 h-4 text-cyan-600 mx-auto mt-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+              @endif
+            </div>
+          </a>
+
+          {{-- APAB --}}
+          <a href="{{ route('apab.index') }}" class="flex flex-col items-center gap-2 p-3 rounded-xl transition-all group {{ request()->routeIs('apab.*') ? 'bg-orange-50 ring-2 ring-orange-500' : 'bg-slate-50 hover:bg-orange-50' }}">
+            <div class="w-16 h-16 rounded-xl bg-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-md p-2">
+              <img src="{{ asset('images/apab.png') }}" alt="APAB" class="w-full h-full object-contain">
+            </div>
+            <div class="text-center">
+              <p class="font-bold text-slate-900 text-sm">APAB</p>
+              @if(request()->routeIs('apab.*'))
+                <svg class="w-4 h-4 text-orange-600 mx-auto mt-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+              @endif
+            </div>
+          </a>
+
+          {{-- Fire Alarm --}}
+          <a href="{{ route('fire-alarm.index') }}" class="flex flex-col items-center gap-2 p-3 rounded-xl transition-all group {{ request()->routeIs('fire-alarm.*') ? 'bg-yellow-50 ring-2 ring-yellow-500' : 'bg-slate-50 hover:bg-yellow-50' }}">
+            <div class="w-16 h-16 rounded-xl bg-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-md p-2">
+              <img src="{{ asset('images/fire-alarm.png') }}" alt="Fire Alarm" class="w-full h-full object-contain">
+            </div>
+            <div class="text-center">
+              <p class="font-bold text-slate-900 text-sm">Fire Alarm</p>
+              @if(request()->routeIs('fire-alarm.*'))
+                <svg class="w-4 h-4 text-yellow-600 mx-auto mt-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+              @endif
+            </div>
+          </a>
+
+          {{-- Box Hydrant --}}
+          <a href="{{ route('box-hydrant.index') }}" class="flex flex-col items-center gap-2 p-3 rounded-xl transition-all group {{ request()->routeIs('box-hydrant.*') ? 'bg-blue-50 ring-2 ring-blue-500' : 'bg-slate-50 hover:bg-blue-50' }}">
+            <div class="w-16 h-16 rounded-xl bg-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-md p-2">
+              <img src="{{ asset('images/box-hydrant.png') }}" alt="Box Hydrant" class="w-full h-full object-contain">
+            </div>
+            <div class="text-center">
+              <p class="font-bold text-slate-900 text-sm">Box Hydrant</p>
+              @if(request()->routeIs('box-hydrant.*'))
+                <svg class="w-4 h-4 text-blue-600 mx-auto mt-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+              @endif
+            </div>
+          </a>
+
+          {{-- Rumah Pompa --}}
+          <a href="{{ route('rumah-pompa.index') }}" class="flex flex-col items-center gap-2 p-3 rounded-xl transition-all group {{ request()->routeIs('rumah-pompa.*') ? 'bg-indigo-50 ring-2 ring-indigo-500' : 'bg-slate-50 hover:bg-indigo-50' }}">
+            <div class="w-16 h-16 rounded-xl bg-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-md p-2">
+              <img src="{{ asset('images/box-hydrant.png') }}" alt="Rumah Pompa" class="w-full h-full object-contain">
+            </div>
+            <div class="text-center">
+              <p class="font-bold text-slate-900 text-sm">Rumah Pompa</p>
+              @if(request()->routeIs('rumah-pompa.*'))
+                <svg class="w-4 h-4 text-indigo-600 mx-auto mt-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+              @endif
+            </div>
+          </a>
+
+          {{-- P3K --}}
+          <a href="{{ route('p3k.index') }}" class="flex flex-col items-center gap-2 p-3 rounded-xl transition-all group {{ request()->routeIs('p3k.*') ? 'bg-green-50 ring-2 ring-green-500' : 'bg-slate-50 hover:bg-green-50' }}">
+            <div class="w-16 h-16 rounded-xl bg-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-md p-2">
+              <img src="{{ asset('images/p3k.png') }}" alt="P3K" class="w-full h-full object-contain">
+            </div>
+            <div class="text-center">
+              <p class="font-bold text-slate-900 text-sm">P3K</p>
+              @if(request()->routeIs('p3k.*'))
+                <svg class="w-4 h-4 text-green-600 mx-auto mt-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+              @endif
+            </div>
+          </a>
+
+          {{-- Referensi --}}
+          <a href="{{ route('referensi.index') }}" class="flex flex-col items-center gap-2 p-3 rounded-xl transition-all group {{ request()->routeIs('referensi.*') ? 'bg-purple-50 ring-2 ring-purple-500' : 'bg-slate-50 hover:bg-purple-50' }}">
+            <div class="w-16 h-16 rounded-xl bg-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-md p-2">
+              <img src="{{ asset('images/referensi.png') }}" alt="Referensi" class="w-full h-full object-contain">
+            </div>
+            <div class="text-center">
+              <p class="font-bold text-slate-900 text-sm">Referensi</p>
+              @if(request()->routeIs('referensi.*'))
+                <svg class="w-4 h-4 text-purple-600 mx-auto mt-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+              @endif
+            </div>
+          </a>
+        </div>
+
+        <div id="userModules" class="grid grid-cols-2 gap-3 hidden">
+          {{-- APAR --}}
+          <a href="{{ route('apar.index') }}" class="flex flex-col items-center gap-2 p-3 rounded-xl transition-all group {{ request()->routeIs('apar.*') ? 'bg-red-50 ring-2 ring-red-500' : 'bg-slate-50 hover:bg-red-50' }}">
+            <div class="w-16 h-16 rounded-xl bg-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-md p-2">
+              <img src="{{ asset('images/apar.png') }}" alt="APAR" class="w-full h-full object-contain">
+            </div>
+            <div class="text-center">
+              <p class="font-bold text-slate-900 text-sm">APAR</p>
+              @if(request()->routeIs('apar.*'))
+                <svg class="w-4 h-4 text-red-600 mx-auto mt-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+              @endif
+            </div>
+          </a>
+
+          {{-- APAT --}}
+          <a href="{{ route('apat.index') }}" class="flex flex-col items-center gap-2 p-3 rounded-xl transition-all group {{ request()->routeIs('apat.*') ? 'bg-cyan-50 ring-2 ring-cyan-500' : 'bg-slate-50 hover:bg-cyan-50' }}">
+            <div class="w-16 h-16 rounded-xl bg-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-md p-2">
+              <img src="{{ asset('images/apat.png') }}" alt="APAT" class="w-full h-full object-contain">
+            </div>
+            <div class="text-center">
+              <p class="font-bold text-slate-900 text-sm">APAT</p>
+              @if(request()->routeIs('apat.*'))
+                <svg class="w-4 h-4 text-cyan-600 mx-auto mt-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+              @endif
+            </div>
+          </a>
+
+          {{-- APAB --}}
+          <a href="{{ route('apab.index') }}" class="flex flex-col items-center gap-2 p-3 rounded-xl transition-all group {{ request()->routeIs('apab.*') ? 'bg-orange-50 ring-2 ring-orange-500' : 'bg-slate-50 hover:bg-orange-50' }}">
+            <div class="w-16 h-16 rounded-xl bg-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-md p-2">
+              <img src="{{ asset('images/apab.png') }}" alt="APAB" class="w-full h-full object-contain">
+            </div>
+            <div class="text-center">
+              <p class="font-bold text-slate-900 text-sm">APAB</p>
+              @if(request()->routeIs('apab.*'))
+                <svg class="w-4 h-4 text-orange-600 mx-auto mt-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+              @endif
+            </div>
+          </a>
+
+          {{-- Fire Alarm --}}
+          <a href="{{ route('fire-alarm.index') }}" class="flex flex-col items-center gap-2 p-3 rounded-xl transition-all group {{ request()->routeIs('fire-alarm.*') ? 'bg-yellow-50 ring-2 ring-yellow-500' : 'bg-slate-50 hover:bg-yellow-50' }}">
+            <div class="w-16 h-16 rounded-xl bg-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-md p-2">
+              <img src="{{ asset('images/fire-alarm.png') }}" alt="Fire Alarm" class="w-full h-full object-contain">
+            </div>
+            <div class="text-center">
+              <p class="font-bold text-slate-900 text-sm">Fire Alarm</p>
+              @if(request()->routeIs('fire-alarm.*'))
+                <svg class="w-4 h-4 text-yellow-600 mx-auto mt-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+              @endif
+            </div>
+          </a>
+
+          {{-- Box Hydrant --}}
+          <a href="{{ route('box-hydrant.index') }}" class="flex flex-col items-center gap-2 p-3 rounded-xl transition-all group {{ request()->routeIs('box-hydrant.*') ? 'bg-blue-50 ring-2 ring-blue-500' : 'bg-slate-50 hover:bg-blue-50' }}">
+            <div class="w-16 h-16 rounded-xl bg-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-md p-2">
+              <img src="{{ asset('images/box-hydrant.png') }}" alt="Box Hydrant" class="w-full h-full object-contain">
+            </div>
+            <div class="text-center">
+              <p class="font-bold text-slate-900 text-sm">Box Hydrant</p>
+              @if(request()->routeIs('box-hydrant.*'))
+                <svg class="w-4 h-4 text-blue-600 mx-auto mt-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+              @endif
+            </div>
+          </a>
+
+          {{-- Rumah Pompa --}}
+          <a href="{{ route('rumah-pompa.index') }}" class="flex flex-col items-center gap-2 p-3 rounded-xl transition-all group {{ request()->routeIs('rumah-pompa.*') ? 'bg-indigo-50 ring-2 ring-indigo-500' : 'bg-slate-50 hover:bg-indigo-50' }}">
+            <div class="w-16 h-16 rounded-xl bg-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-md p-2">
+              <img src="{{ asset('images/box-hydrant.png') }}" alt="Rumah Pompa" class="w-full h-full object-contain">
+            </div>
+            <div class="text-center">
+              <p class="font-bold text-slate-900 text-sm">Rumah Pompa</p>
+              @if(request()->routeIs('rumah-pompa.*'))
+                <svg class="w-4 h-4 text-indigo-600 mx-auto mt-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+              @endif
+            </div>
+          </a>
+
+          {{-- P3K --}}
+          <a href="{{ route('p3k.index') }}" class="flex flex-col items-center gap-2 p-3 rounded-xl transition-all group {{ request()->routeIs('p3k.*') ? 'bg-green-50 ring-2 ring-green-500' : 'bg-slate-50 hover:bg-green-50' }}">
+            <div class="w-16 h-16 rounded-xl bg-white flex items-center justify-center group-hover:scale-110 transition-transform shadow-md p-2">
+              <img src="{{ asset('images/p3k.png') }}" alt="P3K" class="w-full h-full object-contain">
+            </div>
+            <div class="text-center">
+              <p class="font-bold text-slate-900 text-sm">P3K</p>
+              @if(request()->routeIs('p3k.*'))
+                <svg class="w-4 h-4 text-green-600 mx-auto mt-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+              @endif
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
   </div>
-</nav>
+
+  <script>
+    function toggleModulSheet(role) {
+      const sheet = document.getElementById('modulSheet');
+      const backdrop = document.getElementById('modulBackdrop');
+      const content = document.getElementById('modulSheetContent');
+      const adminModules = document.getElementById('adminModules');
+      const userModules = document.getElementById('userModules');
+      
+      const isOpen = !sheet.classList.contains('pointer-events-none');
+      
+      if (isOpen) {
+        // Close
+        backdrop.classList.remove('opacity-100');
+        backdrop.classList.add('opacity-0');
+        content.classList.remove('translate-y-0');
+        content.classList.add('translate-y-full');
+        setTimeout(() => {
+          sheet.classList.add('pointer-events-none');
+        }, 300);
+      } else {
+        // Open
+        sheet.classList.remove('pointer-events-none');
+        setTimeout(() => {
+          backdrop.classList.remove('opacity-0');
+          backdrop.classList.add('opacity-100');
+          content.classList.remove('translate-y-full');
+          content.classList.add('translate-y-0');
+        }, 10);
+        
+        // Show correct module list
+        if (role === 'admin') {
+          adminModules.classList.remove('hidden');
+          userModules.classList.add('hidden');
+        } else {
+          userModules.classList.remove('hidden');
+          adminModules.classList.add('hidden');
+        }
+      }
+    }
+
+    // Close sheet when clicking backdrop (not content)
+    document.addEventListener('DOMContentLoaded', function() {
+      const sheet = document.getElementById('modulSheet');
+      const backdrop = document.getElementById('modulBackdrop');
+      
+      if (sheet && backdrop) {
+        backdrop.addEventListener('click', function(e) {
+          if (e.target === backdrop) {
+            toggleModulSheet();
+          }
+        });
+      }
+    });
+  </script>
 
 </body>
 </html>
